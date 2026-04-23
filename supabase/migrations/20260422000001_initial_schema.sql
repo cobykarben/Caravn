@@ -87,7 +87,6 @@ create table friendships (
   addressee_id uuid references profiles(id) on delete cascade not null,
   status       text check (status in ('pending','accepted','rejected')) default 'pending' not null,
   created_at   timestamptz default now(),
-  unique (least(requester_id, addressee_id), greatest(requester_id, addressee_id)),
   check (requester_id <> addressee_id)
 );
 
@@ -126,3 +125,5 @@ create index rides_status_idx      on rides (status);
 create index applications_ride_idx on ride_applications (ride_id);
 create index applications_rider_idx on ride_applications (rider_id);
 create index messages_chat_idx     on messages (chat_id, created_at);
+create unique index friendships_pair_uq
+  on friendships (least(requester_id, addressee_id), greatest(requester_id, addressee_id));
