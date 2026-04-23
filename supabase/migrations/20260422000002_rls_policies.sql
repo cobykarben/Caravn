@@ -32,7 +32,10 @@ create policy "applications_select" on ride_applications for select to authentic
   using (auth.uid() = rider_id or
          auth.uid() = (select driver_id from rides where id = ride_id));
 create policy "applications_insert" on ride_applications for insert to authenticated
-  with check (auth.uid() = rider_id);
+  with check (
+    auth.uid() = rider_id and
+    exists (select 1 from public.rides where id = ride_id and status = 'active')
+  );
 create policy "applications_rider_update" on ride_applications for update to authenticated
   using (auth.uid() = rider_id) with check (status = 'cancelled');
 create policy "applications_driver_update" on ride_applications for update to authenticated
@@ -46,6 +49,8 @@ create policy "friendships_insert" on friendships for insert to authenticated
   with check (auth.uid() = requester_id);
 create policy "friendships_update" on friendships for update to authenticated
   using (auth.uid() = addressee_id) with check (status in ('accepted','rejected'));
+create policy "friendships_delete" on friendships for delete to authenticated
+  using (auth.uid() = requester_id or auth.uid() = addressee_id);
 
 -- RIDE CHATS
 create policy "chats_select" on ride_chats for select to authenticated

@@ -87,7 +87,7 @@ create table friendships (
   addressee_id uuid references profiles(id) on delete cascade not null,
   status       text check (status in ('pending','accepted','rejected')) default 'pending' not null,
   created_at   timestamptz default now(),
-  unique (requester_id, addressee_id),
+  unique (least(requester_id, addressee_id), greatest(requester_id, addressee_id)),
   check (requester_id <> addressee_id)
 );
 
