@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateSeatTemplate, seatMapToRecord } from '../seat-templates'
+import { generateSeatTemplate, seatMapToRecord, seatRecordToArray } from '../seat-templates'
 
 describe('generateSeatTemplate', () => {
   it('returns the correct number of seats for a sedan with capacity 5', () => {
@@ -35,5 +35,14 @@ describe('seatMapToRecord', () => {
     seats.forEach(seat => {
       expect(record[seat.id]).toEqual(seat)
     })
+  })
+})
+
+describe('seatRecordToArray', () => {
+  it('round-trips through seatMapToRecord preserving row/position order', () => {
+    const original = generateSeatTemplate('sedan', 5)
+    const record = seatMapToRecord(original)
+    const result = seatRecordToArray(record)
+    expect(result.map(s => s.id)).toEqual(original.map(s => s.id))
   })
 })

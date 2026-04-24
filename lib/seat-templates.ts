@@ -85,3 +85,9 @@ export function generateSeatTemplate(vehicleType: string, capacity: number): Sea
 export function seatMapToRecord(seats: Seat[]): Record<string, Seat> {
   return Object.fromEntries(seats.map(s => [s.id, s]))
 }
+
+export function seatRecordToArray(seatMap: Record<string, Seat>): Seat[] {
+  return Object.values(seatMap).sort((a, b) =>
+    a.row !== b.row ? a.row - b.row : a.position - b.position
+  )
+}
