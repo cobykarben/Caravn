@@ -81,7 +81,11 @@ export function VehicleForm() {
     setError(null)
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setError('Session expired. Please sign in again.')
+      setLoading(false)
+      return
+    }
 
     const seatTemplate = generateSeatTemplate(type, capacity)
 

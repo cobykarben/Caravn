@@ -40,9 +40,11 @@ export default function VehiclesPage() {
   async function setDefault(vehicleId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from('vehicles').update({ is_default: false }).eq('owner_id', user.id)
-    await supabase.from('vehicles').update({ is_default: true }).eq('id', vehicleId)
-    setVehicles(prev => prev.map(v => ({ ...v, is_default: v.id === vehicleId })))
+    const { error: e1 } = await supabase.from('vehicles').update({ is_default: false }).eq('owner_id', user.id)
+    const { error: e2 } = await supabase.from('vehicles').update({ is_default: true }).eq('id', vehicleId)
+    if (!e1 && !e2) {
+      setVehicles(prev => prev.map(v => ({ ...v, is_default: v.id === vehicleId })))
+    }
   }
 
   return (
