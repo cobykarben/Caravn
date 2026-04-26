@@ -350,6 +350,23 @@ export default async function RideDetailPage({
         </div>
       )}
 
+      {/* Rejected or cancelled applicant view */}
+      {!isDriver && myApplication && (myApplication.status === 'rejected' || myApplication.status === 'cancelled') && (
+        <div className="p-4 rounded-xl border border-border bg-card">
+          <div className="flex items-center gap-2 mb-1">
+            <X className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm font-semibold text-muted-foreground">
+              {myApplication.status === 'rejected' ? 'Request not accepted' : 'Request cancelled'}
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {myApplication.status === 'rejected'
+              ? 'The driver didn\'t have space for your request.'
+              : 'You cancelled your seat request for this ride.'}
+          </p>
+        </div>
+      )}
+
       {/* Visitor: active ride — show application form */}
       {!isDriver && !myApplication && ride.status === 'active' && (
         <div>

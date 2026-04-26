@@ -39,7 +39,7 @@ export function RideApplicationForm({ ride }: Props) {
   }
 
   const estimatedCost = ride.is_paid
-    ? calculateCostShare(ride.cost_per_person, ride.accepted_count + 1)
+    ? calculateCostShare(ride.cost_per_person, ride.accepted_count + Math.max(1, selectedIds.length))
     : 0
 
   async function handleSubmit(e: React.FormEvent) {

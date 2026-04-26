@@ -91,6 +91,14 @@ describe('CreateRideWizard — step 1 (event selection)', () => {
     render(<CreateRideWizard preselectedEvent={mockEvent} />)
     expect(screen.getByText('Taylor Swift — Eras Tour')).toBeInTheDocument()
   })
+
+  it('shows search input again after clicking "Change event"', async () => {
+    const user = userEvent.setup()
+    render(<CreateRideWizard preselectedEvent={mockEvent} />)
+    expect(screen.queryByPlaceholderText(/search events/i)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /change event/i }))
+    expect(screen.getByPlaceholderText(/search events/i)).toBeInTheDocument()
+  })
 })
 
 describe('CreateRideWizard — step 2 (vehicle selection)', () => {

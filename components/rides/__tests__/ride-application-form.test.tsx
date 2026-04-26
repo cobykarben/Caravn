@@ -58,6 +58,16 @@ describe('RideApplicationForm', () => {
     expect(screen.getByText(/\$20\.00/)).toBeInTheDocument()
   })
 
+  it('updates estimated cost when 2 seats are selected on a paid ride', async () => {
+    const user = userEvent.setup()
+    // paidRide: cost_per_person=60, accepted_count=1
+    // 2 seats selected → calculateCostShare(60, 1+2) = 60 / (3+1) = $15.00
+    render(<RideApplicationForm ride={paidRide} />)
+    await user.click(screen.getByRole('button', { name: /front passenger/i }))
+    await user.click(screen.getByRole('button', { name: /rear left/i }))
+    expect(screen.getByText(/\$15\.00/)).toBeInTheDocument()
+  })
+
   it('shows custom pickup address field when driver has flexible pickup radius', () => {
     render(<RideApplicationForm ride={flexRide} />)
     expect(screen.getByLabelText(/custom pickup/i)).toBeInTheDocument()

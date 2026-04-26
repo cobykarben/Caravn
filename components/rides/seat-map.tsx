@@ -53,6 +53,7 @@ export function SeatMap({
         return (
           <button
             key={seat.id}
+            type="button"
             onClick={() => handleClick(seat)}
             disabled={!isClickable && !seat.isDriver}
             aria-label={`${seat.label}${isSelected ? ' (selected)' : ''}`}

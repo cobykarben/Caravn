@@ -61,7 +61,7 @@ function StepIndicator({ current }: { current: WizardStep }) {
   )
 }
 
-function Step1Event({ selected, onSelect }: { selected: WizardEvent | null; onSelect: (e: WizardEvent) => void }) {
+function Step1Event({ selected, onSelect }: { selected: WizardEvent | null; onSelect: (e: WizardEvent | null) => void }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<WizardEvent[]>([])
   const supabase = createClient()
@@ -88,7 +88,7 @@ function Step1Event({ selected, onSelect }: { selected: WizardEvent | null; onSe
         <div className="mb-4 p-3 rounded-xl border border-foreground/30 bg-card">
           <p className="text-sm font-semibold">{selected.name}</p>
           <p className="text-xs text-muted-foreground">{selected.venue_name} · {selected.city}</p>
-          <button onClick={() => { setQuery(''); setResults([]) }} className="text-xs text-muted-foreground underline underline-offset-4 mt-1">Change event</button>
+          <button onClick={() => { onSelect(null); setQuery(''); setResults([]) }} className="text-xs text-muted-foreground underline underline-offset-4 mt-1">Change event</button>
         </div>
       )}
       {!selected && (
