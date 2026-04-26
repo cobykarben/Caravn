@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { RideCard } from '@/components/rides/ride-card'
+import type { Seat } from '@/lib/seat-templates'
 
 type EventRow = {
   id: string
@@ -24,7 +25,7 @@ type RideRow = {
   cost_per_person: number
   is_paid: boolean
   status: string
-  seat_map: Record<string, { status: string; isDriver: boolean }>
+  seat_map: Record<string, Seat>
 }
 
 export default async function EventDetailPage({
