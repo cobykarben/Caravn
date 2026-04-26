@@ -39,7 +39,11 @@ function parseActions(text: string): ActionBlock[] {
 }
 
 function stripActions(text: string): string {
-  return text.replace(ACTION_REGEX, '').replace(/\n{3,}/g, '\n\n').trim()
+  return text
+    .replace(ACTION_REGEX, '')          // remove complete action blocks
+    .replace(/<action[\s\S]*$/, '')     // remove any incomplete action block still streaming
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 type Props = {

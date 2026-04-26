@@ -274,24 +274,26 @@ export async function applyToRide(input: {
   }
 }
 
-// Dispatcher — called by the API route
+// Dispatcher — called by the API route.
+// userId is the authenticated session user — injected into every auth field so the
+// AI never needs to know or pass UUIDs for the current user.
 export async function executeToolCall(
   name: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   input: Record<string, any>,
-  _userId: string,
+  userId: string,
 ): Promise<unknown> {
   switch (name) {
     case 'search_events':
       return searchEvents(input as { query: string; date?: string })
     case 'get_user_profile':
-      return getUserProfile(input as { user_id: string })
+      return getUserProfile({ user_id: userId })
     case 'find_rides':
       return findRides(input as { event_id: string; lat?: number; lng?: number })
     case 'create_ride':
-      return createRide(input as Parameters<typeof createRide>[0])
+      return createRide({ ...(input as Parameters<typeof createRide>[0]), driver_id: userId })
     case 'apply_to_ride':
-      return applyToRide(input as Parameters<typeof applyToRide>[0])
+      return applyToRide({ ...(input as Parameters<typeof applyToRide>[0]), rider_id: userId })
     default:
       return { error: `Unknown tool: ${name}` }
   }
