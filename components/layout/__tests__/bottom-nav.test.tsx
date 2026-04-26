@@ -11,7 +11,7 @@ describe('BottomNav', () => {
     render(<BottomNav />)
     expect(screen.getByLabelText('Events')).toBeInTheDocument()
     expect(screen.getByLabelText('Rides')).toBeInTheDocument()
-    expect(screen.getByLabelText('Add')).toBeInTheDocument()
+    expect(screen.getByLabelText('AI')).toBeInTheDocument()
     expect(screen.getByLabelText('Inbox')).toBeInTheDocument()
     expect(screen.getByLabelText('Profile')).toBeInTheDocument()
   })

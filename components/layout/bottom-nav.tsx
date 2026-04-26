@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, Car, MessageCircle, User } from 'lucide-react'
+import { CalendarDays, Car, Sparkles, MessageCircle, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { href: '/events',  label: 'Events',  icon: CalendarDays },
   { href: '/rides',   label: 'Rides',   icon: Car },
-  { href: null,       label: 'Add',     icon: null },
+  { href: '/ai',      label: 'AI',      icon: Sparkles },
   { href: '/inbox',   label: 'Inbox',   icon: MessageCircle },
   { href: '/profile', label: 'Profile', icon: User },
 ] as const
@@ -20,14 +20,8 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] border-t border-border bg-background z-40">
       <div className="flex items-center justify-around h-16 px-2">
         {NAV_ITEMS.map(item => {
-          if (!item.href) {
-            return (
-              <div key="fab-slot" className="w-14" aria-label="Add" />
-            )
-          }
-
           const isActive = pathname.startsWith(item.href)
-          const Icon = item.icon!
+          const Icon = item.icon
 
           return (
             <Link
