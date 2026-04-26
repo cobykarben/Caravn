@@ -1,6 +1,9 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { EventResultCard, type EventResultData } from './event-result-card'
+import { RideSuggestionCard, type RideSuggestionData } from './ride-suggestion-card'
+import { RidePreviewCard, type RidePreviewData } from './ride-preview-card'
 
 export type UIMessage = {
   id: string
@@ -9,30 +12,88 @@ export type UIMessage = {
   isStreaming?: boolean
 }
 
+type ActionBlock =
+  | { type: 'event_result'; data: EventResultData }
+  | { type: 'ride_suggestion'; data: RideSuggestionData }
+  | { type: 'ride_preview'; data: RidePreviewData }
+
+// Matches <action type="...">...</action> with JSON body
+const ACTION_REGEX = /<action type="([^"]+)">([\s\S]*?)<\/action>/g
+
+function parseActions(text: string): ActionBlock[] {
+  const blocks: ActionBlock[] = []
+  for (const match of text.matchAll(ACTION_REGEX)) {
+    const type = match[1]
+    const json = match[2]
+    if (!type || !json) continue
+    try {
+      const data = JSON.parse(json.trim())
+      if (type === 'event_result') blocks.push({ type, data: data as EventResultData })
+      else if (type === 'ride_suggestion') blocks.push({ type, data: data as RideSuggestionData })
+      else if (type === 'ride_preview') blocks.push({ type, data: data as RidePreviewData })
+    } catch {
+      // malformed JSON — skip this block
+    }
+  }
+  return blocks
+}
+
+function stripActions(text: string): string {
+  return text.replace(ACTION_REGEX, '').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 type Props = {
   message: UIMessage
-  // Called by rich card action buttons (AI-4). onSend("yes") auto-submits a user message.
   onSend?: (text: string) => void
 }
 
-export function AIMessage({ message }: Props) {
+export function AIMessage({ message, onSend }: Props) {
   const isUser = message.role === 'user'
+  const cleanText = stripActions(message.text)
+  const actions = isUser || message.isStreaming ? [] : parseActions(message.text)
 
   return (
-    <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
-      <div
-        className={cn(
-          'max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
-          isUser
-            ? 'bg-foreground text-background rounded-br-sm'
-            : 'bg-muted text-foreground rounded-bl-sm',
-        )}
-      >
-        <span className="whitespace-pre-wrap break-words">{message.text}</span>
-        {message.isStreaming && (
-          <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-current rounded-sm animate-pulse align-middle" />
-        )}
-      </div>
+    <div className={cn('flex flex-col', isUser ? 'items-end' : 'items-start')}>
+      {/* Text bubble — only render if there's visible text */}
+      {cleanText.length > 0 && (
+        <div
+          className={cn(
+            'max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed',
+            isUser
+              ? 'bg-foreground text-background rounded-br-sm'
+              : 'bg-muted text-foreground rounded-bl-sm',
+          )}
+        >
+          <span className="whitespace-pre-wrap break-words">{cleanText}</span>
+          {message.isStreaming && (
+            <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-current rounded-sm animate-pulse align-middle" />
+          )}
+        </div>
+      )}
+
+      {/* Streaming cursor with no text yet */}
+      {message.isStreaming && cleanText.length === 0 && (
+        <div className="max-w-[85%] px-4 py-2.5 rounded-2xl bg-muted">
+          <span className="inline-block w-1.5 h-3.5 bg-muted-foreground rounded-sm animate-pulse" />
+        </div>
+      )}
+
+      {/* Rich cards — rendered below text, full width */}
+      {actions.length > 0 && onSend && (
+        <div className="w-full max-w-[340px] space-y-0">
+          {actions.map((action, i) => {
+            if (action.type === 'event_result') {
+              return <EventResultCard key={i} data={action.data} onSend={onSend} />
+            }
+            if (action.type === 'ride_suggestion') {
+              return <RideSuggestionCard key={i} data={action.data} onSend={onSend} />
+            }
+            if (action.type === 'ride_preview') {
+              return <RidePreviewCard key={i} data={action.data} onSend={onSend} />
+            }
+          })}
+        </div>
+      )}
     </div>
   )
 }
