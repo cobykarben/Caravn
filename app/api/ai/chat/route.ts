@@ -33,6 +33,7 @@ After find_rides, output one per ride (max 3):
 
 Before asking the user to confirm ride creation, output:
 <action type="ride_preview">{"event_name":"NAME","vehicle":"YEAR MAKE MODEL","departure_address":"ADDR","departure_time":"ISO","cost_per_person":0,"available_seats":N}</action>
+(N = passenger_seats from get_user_profile, i.e. vehicle capacity minus 1 for the driver)
 
 When the user's message says "apply to ride ID seat SEAT_ID", call apply_to_ride with ride_id=ID and seat_ids=[SEAT_ID].`
 

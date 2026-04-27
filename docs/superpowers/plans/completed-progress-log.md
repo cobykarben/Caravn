@@ -152,7 +152,7 @@ Chronological record of what's been built, with commit hashes for reference.
 
 ### 2026-04-26 — Task AI-1: API Infrastructure
 
-**Commit:** (uncommitted as of log update)
+**Commit:** `3fa3af1`
 
 **What was built:**
 - Installed `@anthropic-ai/sdk`
@@ -165,74 +165,81 @@ Chronological record of what's been built, with commit hashes for reference.
   - `apply_to_ride`: inserts `ride_applications` row with `status: 'pending'`
 - `lib/ai/tool-handlers.ts` — Supabase query implementations for each tool + dispatcher `executeToolCall()`
   - NYC neighborhood location lookup table (12 entries) for proximity sorting
-  - 3 `any` casts needed due to `types/database.ts` being a stub (not real generated types)
+  - userId injected server-side into all auth fields — AI never needs UUIDs
 - `app/api/ai/chat/route.ts` — streaming SSE POST route
   - Agentic loop: up to 10 iterations, executes all tool calls per iteration, streams text/tool events
   - System prompt with `cache_control: { type: 'ephemeral' }` for prompt caching
   - SSE event types: `text`, `tool_call`, `tool_result`, `done`, `error`
-- `.env.local.example` — added `ANTHROPIC_API_KEY=your_anthropic_api_key_here`
-
-**TypeScript fixes needed (stub types workaround):**
-- `(supabase as any).rpc('find_similar_events', ...)` — RPC not declared in stub
-- `(supabase as any).from('rides').select(...)` — join result type inferred as `never`
-- `(rides as any[]).map(r => ...)` — propagated `any` from above cast
-
-**Build status:** `npm run build` passes, 0 TypeScript errors, 21 routes compiled.
+- Service role grants migrations: `20260426000001_grants_backfill.sql`, `20260426000002_service_role_grants.sql`
+- `middleware.ts` updated: passes `/api/*` routes through without auth redirect
 
 ---
 
-## AI Features — Remaining Tasks
+### 2026-04-26 — Tasks AI-2 through AI-4: Nav, Chat Shell, Rich Cards
 
-### Task AI-2: Nav + routing changes
-**Files to modify/create:**
-- `app/page.tsx` — change `redirect('/events')` → `redirect('/ai')`
-- `components/layout/bottom-nav.tsx` — replace FAB gap with `Sparkles` icon → `/ai`
-- `components/layout/fab.tsx` — delete file
-- `app/(app)/layout.tsx` — remove `<FAB />` import and render
-- `app/(app)/ai/page.tsx` — new server component, gets user, renders `<AIChat userId={user.id} />`
+**Commits:** `6685388`, `3cd5564`, `b81ac36`, `036e3e3`
 
-**Acceptance:** `/` lands on AI page. Center nav is a sparkle icon. No FAB anywhere.
+**AI-2: Nav + routing**
+- `app/page.tsx` → `redirect('/ai')`
+- `components/layout/bottom-nav.tsx` — FAB gap replaced with `Sparkles` icon → `/ai`
+- `components/layout/fab.tsx` — deleted
+- `app/(app)/layout.tsx` — FAB removed
+- `app/(app)/ai/page.tsx` — server component, passes userId to `<AIChat>`
 
----
+**AI-3: Chat shell**
+- `components/ai/ai-chat.tsx` — streaming fetch, message history, auto-resize textarea, greeting state
+- `components/ai/ai-message.tsx` — bubble renderer with action tag parsing + `stripActions` for clean display
 
-### Task AI-3: AI Chat shell
-**Files to create:**
-- `components/ai/ai-chat.tsx` — client component: message list, streaming fetch, input bar, clear button
-- `components/ai/ai-message.tsx` — message bubble renderer (user = right/foreground, AI = left/muted)
-
-**Acceptance:** Type a message → streams back a response → history maintained across turns.
-
----
-
-### Task AI-4: Rich card components
-**Files to create:**
-- `components/ai/event-result-card.tsx` — event match card with "That's the one" / "Not this one" buttons
-- `components/ai/ride-suggestion-card.tsx` — ride card with Apply button + Details link
-- `components/ai/ride-preview-card.tsx` — ride creation confirmation with "Post it" / "Edit" buttons
-
-**Wire-up:** `ai-message.tsx` parses `<action type="..." data={...} />` JSON blocks from AI response and renders the appropriate card. Cards trigger tool calls via callback into `ai-chat.tsx`.
-
-**Acceptance:** AI event match renders EventResultCard. Ride results render RideSuggestionCards. Confirmation step renders RidePreviewCard.
+**AI-4: Rich cards**
+- `components/ai/event-result-card.tsx` — event match with "That's the one" / "Not this one"
+- `components/ai/ride-suggestion-card.tsx` — ride card with Apply + Details link
+- `components/ai/ride-preview-card.tsx` — ride creation preview with "Post it" / "Edit"
+- Wire-up: `ai-message.tsx` parses `<action type="...">JSON</action>` blocks and renders the card
+- All card "Post it" / "That's the one" / Apply buttons call `onSend()` to inject a new user turn
 
 ---
 
-### Task AI-5: Ride creation flow end-to-end
-`create_ride` handler already inserts to Supabase (done in AI-1). This task is the full Flow A smoke-test:
-- search → confirm event → prefill from profile → enter departure time → review card → post
-- Verify ride appears in `/rides` under Driving
+### 2026-04-26 — Task AI-5: Ride Creation Flow (Flow A) — Complete
 
-**Acceptance:** A ride created via AI conversation appears in My Rides.
+**Verified end-to-end code path:**
+
+1. User: "make a ride for the Giants game tonight"
+2. AI calls `search_events` → returns event with id, name, venue, starts_at
+3. AI outputs text + `<action type="event_result">{"id":"...","name":"...","starts_at":"..."}</action>`
+4. User taps "That's the one" → sends "yes, that's the one"
+5. AI calls `get_user_profile` → returns `default_vehicle.id`, `passenger_seats`, vehicle description
+6. AI outputs text: "Got it. Your 2022 Toyota Camry — 4 passenger seats. What time do you want to leave?"
+7. User types "around 5"
+8. AI outputs ride_preview action with event_name (from history), vehicle description, departure time, `available_seats = passenger_seats`
+9. User taps "Post it" → sends "confirm, post the ride"
+10. AI calls `get_user_profile` again (vehicle_id UUID not in text history) → then calls `create_ride` once
+11. `create_ride` handler: fetches seat_template, builds seat_map, inserts ride with status 'active', driver_id = userId
+12. AI includes `/rides/[new-id]` link from tool result
+13. Ride appears in `/rides` under Driving (queried by `driver_id = user.id`)
+
+**Bug fixed:** Double `create_ride` call — Claude was calling `create_ride` first with an invented vehicle_id (fails "Vehicle not found"), then `get_user_profile`, then `create_ride` again. Fixed by:
+- System prompt: `get_user_profile` MUST be called before `create_ride`; once `create_ride` returns success, STOP all tool calls
+- Tool description: vehicle_id must come from `get_user_profile`, call this exactly once per confirmation
+- System prompt: `available_seats` in ride_preview = `passenger_seats` from profile (capacity − 1)
+
+**Both Flow A and Flow B smoke-tested and passing.**
 
 ---
 
-### Task AI-6: Ride finding flow end-to-end
-`find_rides` handler already queries Supabase (done in AI-1). This task is the full Flow B smoke-test:
-- search → confirm event → see ranked ride cards → tap Apply → pending application created
-- Verify application appears in `/rides` under Riding
+## AI Features — Remaining Task
 
-**Acceptance:** Applying via AI creates a pending application visible in My Rides.
+### Task AI-6: Ride Finding Flow (Flow B) — ✅ Already passing (smoke-tested with AI-5)
+
+`find_rides` handler queries Supabase (done in AI-1). Flow B verified:
+- search → confirm event → `find_rides` tool → RideSuggestionCards rendered → Apply → `apply_to_ride` inserts pending application
+- Application visible in `/rides` under Riding
+
+No additional code changes needed. AI features complete.
 
 ---
 
-**Suggested next prompt:**
-> "Read `docs/superpowers/plans/phase-1-ai-features.md` only. Implement Task AI-2: Nav + routing changes. Modify `app/page.tsx`, `components/layout/bottom-nav.tsx`, `app/(app)/layout.tsx`, delete `components/layout/fab.tsx`, and create `app/(app)/ai/page.tsx`."
+**Current AI state (2026-04-26):**
+- All 6 AI tasks done
+- 95 tests passing (97 − 2 removed FAB tests, expected)
+- 0 TypeScript errors
+- 22 routes (20 Phase 1 + `/ai` + `/api/ai/chat`)
