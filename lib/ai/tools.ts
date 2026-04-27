@@ -61,6 +61,8 @@ export const AI_TOOLS: Anthropic.Tool[] = [
     description:
       'Create and publish a new ride. Only call this after the user has explicitly confirmed ' +
       'all the details (event, vehicle, departure address, departure time). ' +
+      'The vehicle_id MUST come from a prior get_user_profile call — never invent one. ' +
+      'Call this exactly ONCE per user confirmation. If it returns success, stop immediately. ' +
       'Returns the new ride ID and a link.',
     input_schema: {
       type: 'object' as const,

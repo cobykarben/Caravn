@@ -25,14 +25,15 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const isAuthPage = ['/login', '/signup', '/verify-email'].some(p => pathname.startsWith(p))
+  const isApiRoute = pathname.startsWith('/api/')
 
-  if (!user && !isAuthPage) {
+  if (!user && !isAuthPage && !isApiRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  if (user && isAuthPage) {
+  if (user && isAuthPage && !isApiRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/events'
     return NextResponse.redirect(url)

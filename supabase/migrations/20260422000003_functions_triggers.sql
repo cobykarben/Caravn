@@ -149,12 +149,12 @@ as $$
   select
     e.id, e.name, e.venue_name, e.starts_at,
     (
-      similarity(e.name, p_name) * 0.5 +
-      similarity(e.venue_name, p_venue) * 0.3 +
+      public.similarity(e.name, p_name) * 0.5 +
+      public.similarity(e.venue_name, p_venue) * 0.3 +
       case when abs(extract(epoch from e.starts_at - p_starts_at)) < 86400 then 0.2 else 0 end
     ) as score
   from public.events e
-  where similarity(e.name, p_name) > 0.3 or similarity(e.venue_name, p_venue) > 0.4
+  where public.similarity(e.name, p_name) > 0.3 or public.similarity(e.venue_name, p_venue) > 0.4
   order by score desc
   limit 5;
 $$;
