@@ -19,10 +19,14 @@ export default async function EventsPage({
   const { q, city, category } = await searchParams
   const supabase = await createClient()
 
+  // Show events that haven't ended yet. For events without an end time,
+  // keep them visible until 6 hours after they start (covers same-day rides).
+  const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+
   let query = supabase
     .from('events')
-    .select('id, name, venue_name, city, starts_at, category, image_url, rides(id)')
-    .gte('starts_at', new Date().toISOString())
+    .select('id, name, venue_name, city, starts_at, ends_at, category, image_url, rides(id)')
+    .or(`ends_at.gte.${new Date().toISOString()},and(ends_at.is.null,starts_at.gte.${cutoff})`)
     .order('starts_at', { ascending: true })
     .limit(50)
 
@@ -43,6 +47,7 @@ export default async function EventsPage({
       venue_name: e.venue_name as string,
       city: e.city as string,
       starts_at: e.starts_at as string,
+      ends_at: e.ends_at as string | null,
       category: e.category as string,
       image_url: e.image_url as string | null,
       ride_count: Array.isArray(rides) ? rides.length : 0,

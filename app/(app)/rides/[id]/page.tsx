@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache'
 import { ChevronLeft, MessageCircle, Check, Clock, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { seatRecordToArray } from '@/lib/seat-templates'
-import { SeatMap } from '@/components/rides/seat-map'
 import { RideApplicationForm } from '@/components/rides/ride-application-form'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -207,12 +206,6 @@ export default async function RideDetailPage({
             <p className="text-sm">{ride.notes}</p>
           </div>
         )}
-      </div>
-
-      {/* Seat map (read-only for everyone) */}
-      <div className="mb-6">
-        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-3">Seat layout</p>
-        <SeatMap seats={seats} readOnly />
       </div>
 
       {/* Group chat link */}
