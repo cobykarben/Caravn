@@ -232,7 +232,8 @@ Chronological record of what's been built, with commit hashes for reference.
 
 `find_rides` handler queries Supabase (done in AI-1). Flow B verified:
 - search → confirm event → `find_rides` tool → RideSuggestionCards rendered → Apply → `apply_to_ride` inserts pending application
-- Application visible in `/rides` under Riding
+- Pending application written to `ride_applications` with `rider_id = userId`, status = `pending`
+- Note: `/rides` Riding section only shows **accepted** applications; the pending row is visible on the ride's detail page. Once the driver accepts, it appears under Riding.
 
 No additional code changes needed. AI features complete.
 
