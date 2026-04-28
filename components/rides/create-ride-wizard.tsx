@@ -6,6 +6,7 @@ import { Search, Car, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { seatMapToRecord, type Seat } from '@/lib/seat-templates'
 import { SeatMap } from '@/components/rides/seat-map'
+import type { VehicleType } from './vehicle-silhouettes'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -163,7 +164,7 @@ function Step2Vehicle({ selected, onSelect }: { selected: WizardVehicle | null; 
                     {isSelected && <div className="w-5 h-5 rounded-full bg-foreground flex items-center justify-center"><Check className="h-3 w-3 text-background" /></div>}
                   </div>
                 </div>
-                {isSelected && <div className="mt-4"><SeatMap seats={v.seat_template} readOnly /></div>}
+                {isSelected && <div className="mt-4"><SeatMap seats={v.seat_template} readOnly vehicleType={v.type as VehicleType} /></div>}
               </button>
             )
           })}
@@ -276,7 +277,7 @@ function Step4Review({ event, vehicle, details, onPublish, publishing }: {
       </div>
       <div className="mb-6">
         <p className="text-xs text-muted-foreground mb-3 text-center">Seat layout</p>
-        <SeatMap seats={vehicle.seat_template} readOnly />
+        <SeatMap seats={vehicle.seat_template} readOnly vehicleType={vehicle.type as VehicleType} />
       </div>
       <Button onClick={onPublish} disabled={publishing} className="w-full" size="lg">
         {publishing ? 'Publishing…' : 'Publish Ride'}

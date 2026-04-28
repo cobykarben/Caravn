@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type { Seat } from '@/lib/seat-templates'
+import type { VehicleType } from './vehicle-silhouettes'
 
 type Props = {
   ride: {
@@ -19,6 +20,7 @@ type Props = {
     pickup_radius_miles: number | null
     seats: Seat[]
     accepted_count: number
+    vehicleType?: VehicleType
   }
 }
 
@@ -78,7 +80,7 @@ export function RideApplicationForm({ ride }: Props) {
         <p className="text-sm font-medium mb-3">
           Select your seat{selectedIds.length > 1 ? 's' : ''}
         </p>
-        <SeatMap seats={ride.seats} selectedSeatIds={selectedIds} onSeatToggle={toggleSeat} />
+        <SeatMap seats={ride.seats} selectedSeatIds={selectedIds} onSeatToggle={toggleSeat} vehicleType={ride.vehicleType} />
       </div>
 
       <div className="p-3 rounded-xl border border-border bg-card text-center">

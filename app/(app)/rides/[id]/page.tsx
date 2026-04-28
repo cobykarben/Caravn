@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { Seat } from '@/lib/seat-templates'
+import type { VehicleType } from '@/components/rides/vehicle-silhouettes'
 
 export default async function RideDetailPage({
   params,
@@ -372,6 +373,7 @@ export default async function RideDetailPage({
               pickup_radius_miles: ride.pickup_radius_miles,
               seats,
               accepted_count: acceptedApplications.length,
+              vehicleType: (vehicle?.type ?? 'sedan') as VehicleType,
             }}
           />
         </div>
