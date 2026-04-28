@@ -7,6 +7,7 @@
  */
 
 export type VehicleType = 'sedan' | 'coupe' | 'hatchback' | 'suv' | 'minivan' | 'van' | 'truck'
+export const VEHICLE_TYPES = ['sedan', 'suv', 'minivan', 'hatchback', 'coupe', 'truck', 'van'] as const satisfies VehicleType[]
 
 export type Silhouette = {
   viewBox: string

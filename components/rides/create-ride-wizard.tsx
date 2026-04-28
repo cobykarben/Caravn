@@ -21,6 +21,7 @@ type WizardEvent = {
 type WizardVehicle = {
   id: string; make: string; model: string; year: number; color: string
   type: string; capacity: number; seat_template: Seat[]; is_default: boolean
+  default_reserved_seat_ids?: string[]
 }
 
 type WizardStep = 1 | 2 | 3 | 4
@@ -127,7 +128,7 @@ function Step2Vehicle({ selected, onSelect, returnTo, reservedSeatIds, onReserve
       if (!user) return
       const { data } = await supabase
         .from('vehicles')
-        .select('id, make, model, year, color, type, capacity, seat_template, is_default')
+        .select('id, make, model, year, color, type, capacity, seat_template, is_default, default_reserved_seat_ids')
         .eq('owner_id', user.id)
         .order('is_default', { ascending: false })
       setVehicles((data ?? []) as WizardVehicle[])
@@ -408,7 +409,7 @@ export function CreateRideWizard({ preselectedEvent, preselectedVehicle }: Props
   const step3Complete = details.departureAddress.trim() !== '' && details.departureTime !== ''
   function next() { setStep(s => (s < 4 ? (s + 1) as WizardStep : s)) }
   function back() { setStep(s => (s > 1 ? (s - 1) as WizardStep : s)) }
-  function handleVehicleSelect(v: WizardVehicle) { setVehicle(v); setReservedSeatIds([]) }
+  function handleVehicleSelect(v: WizardVehicle) { setVehicle(v); setReservedSeatIds(v.default_reserved_seat_ids ?? []) }
   function toggleReserved(id: string) { setReservedSeatIds(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]) }
   const returnTo = encodeURIComponent('/rides/new' + (searchParams.get('event') ? `?event=${searchParams.get('event')}` : ''))
 

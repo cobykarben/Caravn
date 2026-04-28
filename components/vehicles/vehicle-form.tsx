@@ -4,76 +4,63 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { generateSeatTemplate, type Seat } from '@/lib/seat-templates'
+import { SeatMap } from '@/components/rides/seat-map'
+import { getBrands, getModelsByBrand, inferVehicleType } from '@/lib/car-data'
+import { VEHICLE_TYPES } from '@/components/rides/vehicle-silhouettes'
+import type { VehicleType } from '@/components/rides/vehicle-silhouettes'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { cn } from '@/lib/utils'
-
-const VEHICLE_TYPES = ['sedan', 'suv', 'minivan', 'truck', 'coupe', 'hatchback', 'van'] as const
-type VehicleType = typeof VEHICLE_TYPES[number]
-
-const MAX_CAPACITY: Record<VehicleType, number> = {
-  sedan: 5, coupe: 4, hatchback: 5, suv: 7, minivan: 8, van: 11, truck: 5,
-}
-
-function SeatPreview({ seats }: { seats: Seat[] }) {
-  const rows = [...new Set(seats.map(s => s.row))].sort((a, b) => a - b)
-  const passengerCount = seats.filter(s => !s.isDriver).length
-
-  return (
-    <div className="bg-muted/50 border border-border rounded-xl p-4">
-      <p className="text-xs text-muted-foreground mb-3 text-center">Seat preview</p>
-      <div className="flex flex-col items-center gap-2">
-        {rows.map(row => {
-          const rowSeats = seats.filter(s => s.row === row)
-          return (
-            <div key={row} className="flex gap-2">
-              {rowSeats.map(seat => (
-                <div
-                  key={seat.id}
-                  title={seat.label}
-                  className={cn(
-                    'w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold',
-                    seat.isDriver
-                      ? 'bg-foreground border-foreground text-background'
-                      : 'bg-transparent border-muted-foreground/40 text-muted-foreground',
-                  )}
-                >
-                  {seat.isDriver ? '▲' : ''}
-                </div>
-              ))}
-            </div>
-          )
-        })}
-      </div>
-      <p className="text-xs text-muted-foreground mt-3 text-center">
-        {passengerCount} passenger seat{passengerCount !== 1 ? 's' : ''}
-      </p>
-    </div>
-  )
-}
 
 export function VehicleForm({ returnTo }: { returnTo?: string }) {
   const [make, setMake] = useState('')
   const [model, setModel] = useState('')
   const [year, setYear] = useState(new Date().getFullYear().toString())
   const [color, setColor] = useState('')
+  const [licensePlate, setLicensePlate] = useState('')
   const [type, setType] = useState<VehicleType>('sedan')
   const [capacity, setCapacity] = useState(5)
-  const [previewSeats, setPreviewSeats] = useState<Seat[]>(() => generateSeatTemplate('sedan', 5))
+  const [seatTemplate, setSeatTemplate] = useState<Seat[]>([])
+  const [defaultReservedSeatIds, setDefaultReservedSeatIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
-  useEffect(() => {
-    setPreviewSeats(generateSeatTemplate(type, capacity))
-  }, [type, capacity])
+  const brands = getBrands()
+  const models = make ? getModelsByBrand(make) : []
 
   useEffect(() => {
-    setCapacity(c => Math.min(c, MAX_CAPACITY[type]))
-  }, [type])
+    if (!model) { setSeatTemplate([]); return }
+    const template = generateSeatTemplate(type, capacity)
+    setSeatTemplate(template)
+    setDefaultReservedSeatIds(prev => prev.filter(id => template.some(s => s.id === id)))
+  }, [type, capacity, model])
+
+  function handleMakeSelect(brand: string | null) {
+    if (!brand) return
+    setMake(brand)
+    setModel('')
+    setSeatTemplate([])
+    setDefaultReservedSeatIds([])
+  }
+
+  function handleModelSelect(modelName: string | null) {
+    if (!modelName) return
+    const modelData = models.find(m => m.model === modelName)
+    if (!modelData) return
+    setModel(modelName)
+    const inferredType = inferVehicleType(make, modelName, modelData.seats)
+    setType(inferredType)
+    setCapacity(modelData.seats)
+  }
+
+  function toggleReservedSeat(seatId: string) {
+    setDefaultReservedSeatIds(prev =>
+      prev.includes(seatId) ? prev.filter(id => id !== seatId) : [...prev, seatId]
+    )
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -87,7 +74,7 @@ export function VehicleForm({ returnTo }: { returnTo?: string }) {
       return
     }
 
-    const seatTemplate = generateSeatTemplate(type, capacity)
+    const template = generateSeatTemplate(type, capacity)
 
     const { data: existing } = await supabase
       .from('vehicles')
@@ -96,7 +83,7 @@ export function VehicleForm({ returnTo }: { returnTo?: string }) {
 
     const isDefault = !existing || existing.length === 0
 
-    const { error } = await supabase.from('vehicles').insert({
+    const { error: insertError } = await supabase.from('vehicles').insert({
       owner_id: user.id,
       make,
       model,
@@ -104,12 +91,14 @@ export function VehicleForm({ returnTo }: { returnTo?: string }) {
       color,
       type,
       capacity,
-      seat_template: seatTemplate,
+      seat_template: template,
       is_default: isDefault,
+      license_plate: licensePlate.trim() || null,
+      default_reserved_seat_ids: defaultReservedSeatIds,
     })
 
-    if (error) {
-      setError(error.message)
+    if (insertError) {
+      setError(insertError.message)
       setLoading(false)
       return
     }
@@ -120,29 +109,37 @@ export function VehicleForm({ returnTo }: { returnTo?: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="make">Make</Label>
-          <Input
-            id="make"
-            value={make}
-            onChange={e => setMake(e.target.value)}
-            placeholder="Toyota"
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="model">Model</Label>
-          <Input
-            id="model"
-            value={model}
-            onChange={e => setModel(e.target.value)}
-            placeholder="Camry"
-            required
-          />
-        </div>
+      {/* Make (brand) */}
+      <div className="space-y-1.5">
+        <Label htmlFor="make">Make</Label>
+        <Select value={make} onValueChange={handleMakeSelect}>
+          <SelectTrigger id="make">
+            <SelectValue placeholder="Select make" />
+          </SelectTrigger>
+          <SelectContent>
+            {brands.map(b => (
+              <SelectItem key={b} value={b}>{b}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
+      {/* Model */}
+      <div className="space-y-1.5">
+        <Label htmlFor="model">Model</Label>
+        <Select value={model} onValueChange={handleModelSelect} disabled={!make}>
+          <SelectTrigger id="model">
+            <SelectValue placeholder={make ? 'Select model' : 'Select make first'} />
+          </SelectTrigger>
+          <SelectContent>
+            {models.map(m => (
+              <SelectItem key={m.model} value={m.model}>{m.model}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Year + Color */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="year">Year</Label>
@@ -168,6 +165,7 @@ export function VehicleForm({ returnTo }: { returnTo?: string }) {
         </div>
       </div>
 
+      {/* Vehicle type */}
       <div className="space-y-1.5">
         <Label htmlFor="type">Vehicle type</Label>
         <Select value={type} onValueChange={v => setType(v as VehicleType)}>
@@ -182,26 +180,53 @@ export function VehicleForm({ returnTo }: { returnTo?: string }) {
         </Select>
       </div>
 
+      {/* License plate */}
       <div className="space-y-1.5">
-        <Label htmlFor="capacity">Total seats (including driver)</Label>
+        <Label htmlFor="licensePlate">License plate</Label>
         <Input
-          id="capacity"
-          type="number"
-          value={capacity}
-          onChange={e =>
-            setCapacity(Math.max(2, Math.min(parseInt(e.target.value) || 2, MAX_CAPACITY[type])))
-          }
-          min={2}
-          max={MAX_CAPACITY[type]}
-          required
+          id="licensePlate"
+          value={licensePlate}
+          onChange={e => setLicensePlate(e.target.value.toUpperCase())}
+          placeholder="ABC 1234"
         />
+        <p className="text-xs text-muted-foreground">Only shown to confirmed riders</p>
       </div>
 
-      <SeatPreview seats={previewSeats} />
+      {/* Seat map — shown once model is selected */}
+      {seatTemplate.length > 0 ? (
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium">Default seat layout</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Tap passenger seats to mark them as always reserved by default (e.g. for car seats or personal preference). You can override this when posting a ride.
+            </p>
+          </div>
+          <SeatMap
+            seats={seatTemplate}
+            vehicleType={type}
+            selectedSeatIds={defaultReservedSeatIds}
+            onSeatToggle={toggleReservedSeat}
+          />
+          {defaultReservedSeatIds.length > 0 && (
+            <p className="text-xs text-muted-foreground text-center">
+              {defaultReservedSeatIds.length} seat{defaultReservedSeatIds.length !== 1 ? 's' : ''} reserved by default
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="bg-muted/30 border border-border border-dashed rounded-xl p-6 text-center">
+          <p className="text-xs text-muted-foreground">Select a make and model to preview the seat layout</p>
+        </div>
+      )}
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 
-      <Button type="submit" className="w-full" size="lg" disabled={loading}>
+      <Button
+        type="submit"
+        className="w-full"
+        size="lg"
+        disabled={loading || !make || !model}
+      >
         {loading ? 'Saving…' : 'Save vehicle'}
       </Button>
     </form>
