@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, Car, Check } from 'lucide-react'
+import { Search, Car, Check, CalendarDays, Minus, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { seatMapToRecord, type Seat } from '@/lib/seat-templates'
 import { SeatMap } from '@/components/rides/seat-map'
@@ -113,7 +113,10 @@ function Step1Event({ selected, onSelect }: { selected: WizardEvent | null; onSe
   )
 }
 
-function Step2Vehicle({ selected, onSelect }: { selected: WizardVehicle | null; onSelect: (v: WizardVehicle) => void }) {
+function Step2Vehicle({ selected, onSelect, returnTo, reservedSeatIds, onReservedToggle }: {
+  selected: WizardVehicle | null; onSelect: (v: WizardVehicle) => void
+  returnTo: string; reservedSeatIds: string[]; onReservedToggle: (id: string) => void
+}) {
   const [vehicles, setVehicles] = useState<WizardVehicle[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -141,7 +144,7 @@ function Step2Vehicle({ selected, onSelect }: { selected: WizardVehicle | null; 
       {vehicles.length === 0 ? (
         <div className="text-center py-12 border border-dashed border-border rounded-xl">
           <p className="text-sm text-muted-foreground mb-3">No vehicles registered</p>
-          <a href="/profile/vehicles/new" className={buttonVariants({ size: 'sm' })}>Add a vehicle first</a>
+          <a href={`/profile/vehicles/new?returnTo=${returnTo}`} className={buttonVariants({ size: 'sm' })}>Add a vehicle first</a>
         </div>
       ) : (
         <div className="space-y-3">
@@ -164,12 +167,72 @@ function Step2Vehicle({ selected, onSelect }: { selected: WizardVehicle | null; 
                     {isSelected && <div className="w-5 h-5 rounded-full bg-foreground flex items-center justify-center"><Check className="h-3 w-3 text-background" /></div>}
                   </div>
                 </div>
-                {isSelected && <div className="mt-4"><SeatMap seats={v.seat_template} readOnly vehicleType={v.type as VehicleType} /></div>}
+                {isSelected && (
+                  <div className="mt-4">
+                    <p className="text-xs text-muted-foreground mb-2 text-center">Tap a seat to mark it as taken</p>
+                    <SeatMap
+                      seats={v.seat_template}
+                      vehicleType={v.type as VehicleType}
+                      selectedSeatIds={reservedSeatIds}
+                      onSeatToggle={onReservedToggle}
+                    />
+                    {reservedSeatIds.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        {reservedSeatIds.length} seat{reservedSeatIds.length !== 1 ? 's' : ''} marked as taken
+                      </p>
+                    )}
+                  </div>
+                )}
               </button>
             )
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+function DateTimeButton({
+  id, label, value, onChange, placeholder, min,
+}: {
+  id: string; label: string; value: string
+  onChange: (v: string) => void; placeholder: string; min?: string
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  const display = value
+    ? new Date(value).toLocaleString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit',
+      })
+    : null
+  return (
+    <div className="space-y-1.5">
+      {/* Label points to the input so getByLabelText works in tests */}
+      <Label htmlFor={id}>{label}</Label>
+      <button
+        type="button"
+        aria-labelledby={`${id}-lbl`}
+        onClick={() => ref.current?.showPicker()}
+        className={cn(
+          'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-sm text-left transition-colors',
+          'border-zinc-600 bg-card hover:border-zinc-400 hover:bg-muted',
+          value ? 'text-foreground' : 'text-muted-foreground/60',
+        )}
+      >
+        <CalendarDays className="h-4 w-4 text-zinc-400 shrink-0" />
+        <span>{display ?? placeholder}</span>
+      </button>
+      {/* sr-only but NOT aria-hidden — tests can type into it via getByLabelText */}
+      <input
+        ref={ref}
+        id={id}
+        type="datetime-local"
+        value={value}
+        min={min}
+        onChange={e => onChange(e.target.value)}
+        className="sr-only"
+        tabIndex={-1}
+      />
     </div>
   )
 }
@@ -190,17 +253,32 @@ function Step3Details({ details, onChange }: { details: RideDetails; onChange: (
           <Label htmlFor="departureAddress">Departure address</Label>
           <Input id="departureAddress" value={details.departureAddress} onChange={e => onChange({ departureAddress: e.target.value })} placeholder="123 Main St, Chicago, IL" required />
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="departureTime">Departure time</Label>
-          <Input id="departureTime" type="datetime-local" value={details.departureTime} onChange={e => onChange({ departureTime: e.target.value })} required />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="returnTime">Return time (optional)</Label>
-          <Input id="returnTime" type="datetime-local" value={details.returnTime} onChange={e => onChange({ returnTime: e.target.value })} min={details.departureTime} />
-        </div>
+        <DateTimeButton
+          id="departureTime"
+          label="Departure time"
+          value={details.departureTime}
+          onChange={v => onChange({ departureTime: v })}
+          placeholder="Select date & time"
+        />
+        <DateTimeButton
+          id="returnTime"
+          label="Return time (optional)"
+          value={details.returnTime}
+          onChange={v => onChange({ returnTime: v })}
+          placeholder="Select date & time (optional)"
+          min={details.departureTime}
+        />
         <div className="space-y-1.5">
           <Label htmlFor="costPerPerson">Cost per person ($)</Label>
-          <Input id="costPerPerson" type="number" min={0} step={0.01} value={details.costPerPerson} onChange={e => onChange({ costPerPerson: parseFloat(e.target.value) || 0 })} />
+          <Input
+            id="costPerPerson"
+            type="number"
+            min={0}
+            step={0.01}
+            value={details.costPerPerson}
+            onFocus={e => e.target.select()}
+            onChange={e => onChange({ costPerPerson: parseFloat(e.target.value) || 0 })}
+          />
           <p className="text-xs text-muted-foreground">Set to $0 for a free ride</p>
         </div>
         <div className="space-y-1.5">
@@ -217,11 +295,27 @@ function Step3Details({ details, onChange }: { details: RideDetails; onChange: (
               className="w-4 h-4 accent-foreground cursor-pointer" aria-label="Flexible pickup" />
           </div>
           {flexPickup && (
-            <div className="space-y-1.5 pt-1 border-t border-border">
-              <Label htmlFor="pickupRadius">Pickup radius (miles)</Label>
-              <Input id="pickupRadius" type="number" min={0.5} max={25} step={0.5}
-                value={details.pickupRadiusMiles ?? 2}
-                onChange={e => onChange({ pickupRadiusMiles: parseFloat(e.target.value) || 2 })} />
+            <div className="space-y-2 pt-2 border-t border-border">
+              <Label>Pickup radius</Label>
+              <div className="flex items-center rounded-lg border border-zinc-600 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => onChange({ pickupRadiusMiles: Math.max(0.5, (details.pickupRadiusMiles ?? 2) - 0.5) })}
+                  className="px-4 py-2.5 text-zinc-400 hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="flex-1 text-center text-sm font-medium py-2.5 border-x border-zinc-600">
+                  {details.pickupRadiusMiles ?? 2} mi
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onChange({ pickupRadiusMiles: Math.min(25, (details.pickupRadiusMiles ?? 2) + 0.5) })}
+                  className="px-4 py-2.5 text-zinc-400 hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -295,6 +389,7 @@ export function CreateRideWizard({ preselectedEvent, preselectedVehicle }: Props
   const [step, setStep] = useState<WizardStep>(hasEventParam ? 2 : 1)
   const [event, setEvent] = useState<WizardEvent | null>(preselectedEvent ?? null)
   const [vehicle, setVehicle] = useState<WizardVehicle | null>(preselectedVehicle ?? null)
+  const [reservedSeatIds, setReservedSeatIds] = useState<string[]>([])
   const [details, setDetails] = useState<RideDetails>({
     departureAddress: '', departureTime: '', returnTime: '', costPerPerson: 0, notes: '', pickupRadiusMiles: null,
   })
@@ -313,6 +408,9 @@ export function CreateRideWizard({ preselectedEvent, preselectedVehicle }: Props
   const step3Complete = details.departureAddress.trim() !== '' && details.departureTime !== ''
   function next() { setStep(s => (s < 4 ? (s + 1) as WizardStep : s)) }
   function back() { setStep(s => (s > 1 ? (s - 1) as WizardStep : s)) }
+  function handleVehicleSelect(v: WizardVehicle) { setVehicle(v); setReservedSeatIds([]) }
+  function toggleReserved(id: string) { setReservedSeatIds(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]) }
+  const returnTo = encodeURIComponent('/rides/new' + (searchParams.get('event') ? `?event=${searchParams.get('event')}` : ''))
 
   async function publish() {
     if (!event || !vehicle) return
@@ -320,6 +418,9 @@ export function CreateRideWizard({ preselectedEvent, preselectedVehicle }: Props
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setPublishing(false); return }
     const seatMap = seatMapToRecord(vehicle.seat_template)
+    for (const seatId of reservedSeatIds) {
+      if (seatMap[seatId]) seatMap[seatId] = { ...seatMap[seatId]!, status: 'occupied' }
+    }
     const { data, error: insertError } = await supabase.from('rides').insert({
       driver_id: user.id, event_id: event.id, vehicle_id: vehicle.id, status: 'active',
       departure_address: details.departureAddress, departure_time: details.departureTime,
@@ -334,7 +435,7 @@ export function CreateRideWizard({ preselectedEvent, preselectedVehicle }: Props
     <div>
       <StepIndicator current={step} />
       {step === 1 && (<><Step1Event selected={event} onSelect={setEvent} /><div className="mt-6 flex justify-end"><Button onClick={next} disabled={!event}>Next</Button></div></>)}
-      {step === 2 && (<><Step2Vehicle selected={vehicle} onSelect={setVehicle} /><div className="mt-6 flex justify-between"><Button variant="outline" onClick={back}>Back</Button><Button onClick={next} disabled={!vehicle}>Next</Button></div></>)}
+      {step === 2 && (<><Step2Vehicle selected={vehicle} onSelect={handleVehicleSelect} returnTo={returnTo} reservedSeatIds={reservedSeatIds} onReservedToggle={toggleReserved} /><div className="mt-6 flex justify-between"><Button variant="outline" onClick={back}>Back</Button><Button onClick={next} disabled={!vehicle}>Next</Button></div></>)}
       {step === 3 && (<><Step3Details details={details} onChange={patch => setDetails(d => ({ ...d, ...patch }))} />{error && <p className="mt-3 text-sm text-red-400">{error}</p>}<div className="mt-6 flex justify-between"><Button variant="outline" onClick={back}>Back</Button><Button onClick={next} disabled={!step3Complete}>Next</Button></div></>)}
       {step === 4 && event && vehicle && (<><Step4Review event={event} vehicle={vehicle} details={details} onPublish={publish} publishing={publishing} />{error && <p className="mt-3 text-sm text-red-400">{error}</p>}<div className="mt-4"><Button variant="outline" onClick={back} className="w-full">Back</Button></div></>)}
     </div>

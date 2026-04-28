@@ -54,7 +54,7 @@ function SeatPreview({ seats }: { seats: Seat[] }) {
   )
 }
 
-export function VehicleForm() {
+export function VehicleForm({ returnTo }: { returnTo?: string }) {
   const [make, setMake] = useState('')
   const [model, setModel] = useState('')
   const [year, setYear] = useState(new Date().getFullYear().toString())
@@ -114,7 +114,7 @@ export function VehicleForm() {
       return
     }
 
-    router.push('/profile/vehicles')
+    router.push(returnTo ?? '/profile/vehicles')
     router.refresh()
   }
 
