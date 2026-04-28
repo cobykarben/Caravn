@@ -9,8 +9,9 @@ import { cn } from '@/lib/utils'
 type APIMessage = { role: 'user' | 'assistant'; content: string }
 
 const GREETING = "Hey, where are you headed? I can find or create a ride for any event."
+const DEFAULT_SUGGESTIONS = ['Find me a ride tonight', 'Post a ride to a game', 'What events are near me?']
 
-export function AIChat({ userId }: { userId: string }) {
+export function AIChat({ userId, suggestions = DEFAULT_SUGGESTIONS }: { userId: string; suggestions?: string[] }) {
   const [uiMessages, setUiMessages] = useState<UIMessage[]>([])
   const [apiMessages, setApiMessages] = useState<APIMessage[]>([])
   const [input, setInput] = useState('')
@@ -159,7 +160,7 @@ export function AIChat({ userId }: { userId: string }) {
               </p>
             </div>
             <div className="flex flex-wrap gap-2 justify-center mt-2">
-              {['Find me a ride tonight', 'Post a ride to a game', 'What events are near me?'].map(s => (
+              {suggestions.map(s => (
                 <button
                   key={s}
                   onClick={() => send(s)}
