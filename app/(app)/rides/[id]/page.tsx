@@ -13,10 +13,13 @@ import type { VehicleType } from '@/components/rides/vehicle-silhouettes'
 
 export default async function RideDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ ref?: string }>
 }) {
   const { id } = await params
+  const { ref } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -134,7 +137,7 @@ export default async function RideDetailPage({
       {/* Back + header */}
       <div className="flex items-center gap-3 mb-6">
         <Link
-          href={rideEvent ? `/events/${rideEvent.id}` : '/rides'}
+          href={ref === 'ai' ? '/ai' : (rideEvent ? `/events/${rideEvent.id}` : '/rides')}
           className="text-muted-foreground"
         >
           <ChevronLeft className="h-5 w-5" />

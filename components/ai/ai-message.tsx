@@ -47,11 +47,12 @@ function renderInline(text: string): React.ReactNode[] {
       // [text](url)
       const href = match[7]!
       const label = match[6]!
-      nodes.push(
-        href.startsWith('/')
-          ? <Link key={key} href={href} className={LINK_CLS}>{label}</Link>
-          : <a key={key} href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLS}>{label}</a>
-      )
+      if (href.startsWith('/')) {
+        const sep = href.includes('?') ? '&' : '?'
+        nodes.push(<Link key={key} href={`${href}${sep}ref=ai`} className={LINK_CLS}>{label}</Link>)
+      } else {
+        nodes.push(<a key={key} href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLS}>{label}</a>)
+      }
     } else if (match[8] !== undefined) {
       // bare https URL — auto-link it
       const href = match[8]

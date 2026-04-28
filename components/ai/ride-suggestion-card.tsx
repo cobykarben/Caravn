@@ -71,7 +71,7 @@ export function RideSuggestionCard({ data, onSend }: Props) {
         </Button>
         <div className="w-px bg-border" />
         <Link
-          href={`/rides/${data.id}`}
+          href={`/rides/${data.id}?ref=ai`}
           className="flex-1 flex items-center justify-center text-xs h-9 text-muted-foreground hover:text-foreground transition-colors rounded-br-xl"
         >
           Details →
