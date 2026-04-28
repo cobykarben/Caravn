@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { EventResultCard, type EventResultData } from './event-result-card'
 import { RideSuggestionCard, type RideSuggestionData } from './ride-suggestion-card'
@@ -19,6 +20,46 @@ type ActionBlock =
 
 // Matches <action type="...">...</action> with JSON body
 const ACTION_REGEX = /<action type="([^"]+)">([\s\S]*?)<\/action>/g
+
+// Inline markdown: **bold**, *italic*, [text](url)
+const INLINE_TOKENS = /(\*\*([^*\n]+)\*\*)|(\*([^*\n]+)\*)|(\[([^\]\n]+)\]\(([^)\n]+)\))/g
+
+function renderInline(text: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = []
+  let last = 0
+  INLINE_TOKENS.lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = INLINE_TOKENS.exec(text)) !== null) {
+    if (match.index > last) nodes.push(text.slice(last, match.index))
+    const key = match.index
+    if (match[1] !== undefined) {
+      nodes.push(<strong key={key} className="font-semibold">{match[2]}</strong>)
+    } else if (match[3] !== undefined) {
+      nodes.push(<em key={key} className="italic">{match[4]}</em>)
+    } else if (match[5] !== undefined) {
+      const href = match[7]!
+      const label = match[6]!
+      nodes.push(
+        href.startsWith('/')
+          ? <Link key={key} href={href} className="underline underline-offset-2 font-medium">{label}</Link>
+          : <a key={key} href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 font-medium">{label}</a>
+      )
+    }
+    last = match.index + match[0].length
+  }
+  if (last < text.length) nodes.push(text.slice(last))
+  return nodes
+}
+
+function renderMarkdown(text: string): React.ReactNode {
+  const lines = text.split('\n')
+  return lines.map((line, i) => (
+    <span key={i}>
+      {renderInline(line)}
+      {i < lines.length - 1 && <br />}
+    </span>
+  ))
+}
 
 function parseActions(text: string): ActionBlock[] {
   const blocks: ActionBlock[] = []
@@ -68,7 +109,7 @@ export function AIMessage({ message, onSend }: Props) {
               : 'bg-muted text-foreground rounded-bl-sm',
           )}
         >
-          <span className="whitespace-pre-wrap break-words">{cleanText}</span>
+          <span className="break-words">{renderMarkdown(cleanText)}</span>
           {message.isStreaming && (
             <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-current rounded-sm animate-pulse align-middle" />
           )}
