@@ -21,28 +21,42 @@ type ActionBlock =
 // Matches <action type="...">...</action> with JSON body
 const ACTION_REGEX = /<action type="([^"]+)">([\s\S]*?)<\/action>/g
 
-// Inline markdown: **bold**, *italic*, [text](url)
-const INLINE_TOKENS = /(\*\*([^*\n]+)\*\*)|(\*([^*\n]+)\*)|(\[([^\]\n]+)\]\(([^)\n]+)\))/g
+// Inline markdown: **bold**, *italic*, [text](url), bare https URLs
+// Regex is created per-call (not module-level) to avoid shared lastIndex state
+function buildTokenRegex() {
+  return /(\*\*([^*\n]+)\*\*)|(\*([^*\n]+)\*)|(\[([^\]\n]+)\]\(([^)\n]+)\))|(https?:\/\/[^\s<>")\]]+)/g
+}
+
+const LINK_CLS = 'underline underline-offset-2 font-medium'
 
 function renderInline(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = []
   let last = 0
-  INLINE_TOKENS.lastIndex = 0
+  const re = buildTokenRegex()
   let match: RegExpExecArray | null
-  while ((match = INLINE_TOKENS.exec(text)) !== null) {
+  while ((match = re.exec(text)) !== null) {
     if (match.index > last) nodes.push(text.slice(last, match.index))
     const key = match.index
     if (match[1] !== undefined) {
+      // **bold**
       nodes.push(<strong key={key} className="font-semibold">{match[2]}</strong>)
     } else if (match[3] !== undefined) {
+      // *italic*
       nodes.push(<em key={key} className="italic">{match[4]}</em>)
     } else if (match[5] !== undefined) {
+      // [text](url)
       const href = match[7]!
       const label = match[6]!
       nodes.push(
         href.startsWith('/')
-          ? <Link key={key} href={href} className="underline underline-offset-2 font-medium">{label}</Link>
-          : <a key={key} href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 font-medium">{label}</a>
+          ? <Link key={key} href={href} className={LINK_CLS}>{label}</Link>
+          : <a key={key} href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLS}>{label}</a>
+      )
+    } else if (match[8] !== undefined) {
+      // bare https URL — auto-link it
+      const href = match[8]
+      nodes.push(
+        <a key={key} href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLS}>{href}</a>
       )
     }
     last = match.index + match[0].length
