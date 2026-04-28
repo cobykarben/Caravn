@@ -244,3 +244,37 @@ No additional code changes needed. AI features complete.
 - 95 tests passing (97 − 2 removed FAB tests, expected)
 - 0 TypeScript errors
 - 22 routes (20 Phase 1 + `/ai` + `/api/ai/chat`)
+
+---
+
+## 2026-04-27 — Seat Map Redesign + Vehicle Form Overhaul
+
+**Seat Map Redesign (commits `e_silhouettes`, `seat-map redesign`):**
+- `components/rides/vehicle-silhouettes.ts` — New file: 7 SVG top-down silhouettes (sedan, coupe, hatchback, suv, minivan, van, truck). Each defines `bodyPath`, `windshieldPath`, `rearWindowPath`, `doorLines`, `wheelWells`, `steeringWheelCx/Cy`, and `interiorTop/Bottom/Left/Right` bounds.
+- `components/rides/seat-map.tsx` — Full redesign: `vehicleType` prop selects silhouette, seat positions computed from interior bounds (replacing hardcoded x/y%), seat buttons changed from circles to 28×22px rounded-rect, SVG colors use rgba whites for Uber-on-dark visibility.
+- Wired `vehicleType` through all 4 callers: `RideApplicationForm`, `CreateRideWizard` step 2, step 4 review, and `rides/[id]` page.
+- Added `VEHICLE_TYPES` const export to `vehicle-silhouettes.ts`.
+
+**RideCard badges (`986617f`):**
+- `role?: 'driver' | 'rider'` prop on `RideCard` — shows "Driving" (white) or "Riding" (green) badge
+- `rides/page.tsx` passes correct role
+- `events/[id]/page.tsx` detects role via `driver_id` match + accepted application lookup
+
+**Ride Wizard UX improvements:**
+- Step 1 skipped when arriving from event page (starts on vehicle selection)
+- Step 2: seat map is interactive — driver can pre-mark seats as taken before publishing
+- `DateTimeButton` component: styled button opens native date picker; departure/return time fields
+- Cost input: `onFocus` selects all text so typing overwrites placeholder
+- Pickup radius: +/− stepper buttons (0.5 mi increments, 0.5–25 mi range)
+- `returnTo` URL param: adding vehicle from within wizard redirects back to wizard
+
+**Add Vehicle form overhaul (`340831f`):**
+- `lib/car-data.ts` — 245 car models from Cars.csv with brand→model cascade and `inferVehicleType()` helper
+- `vehicle-form.tsx` — Brand + Model dropdowns auto-fill seat count and infer vehicle type; interactive `SeatMap` replaces circle preview; license plate field (stored, noted for group chat display in Phase 2); default reserved seats (persisted as `default_reserved_seat_ids[]`)
+- Migration `20260427000001_vehicles_schema_update.sql`: adds `license_plate text` and `default_reserved_seat_ids text[] DEFAULT '{}'` to vehicles table (pushed to remote)
+- Wizard `handleVehicleSelect` seeds `reservedSeatIds` from vehicle's `default_reserved_seat_ids`
+- Step 2: "Add new vehicle" dashed button always visible at bottom of vehicle list (links to `/profile/vehicles/new?returnTo=...`)
+
+**State (2026-04-27):**
+- 96 tests passing, 0 TypeScript errors
+- DB migration applied to remote

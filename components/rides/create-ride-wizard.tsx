@@ -187,6 +187,17 @@ function Step2Vehicle({ selected, onSelect, returnTo, reservedSeatIds, onReserve
               </button>
             )
           })}
+          {/* Always show option to add a new vehicle */}
+          <a
+            href={`/profile/vehicles/new?returnTo=${returnTo}`}
+            className={cn(
+              'flex items-center justify-center gap-2 w-full p-4 rounded-xl border-2 border-dashed',
+              'border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors',
+            )}
+          >
+            <Car className="h-4 w-4" />
+            <span className="text-sm font-medium">Add new vehicle</span>
+          </a>
         </div>
       )}
     </div>
