@@ -291,7 +291,8 @@ type Props = { preselectedEvent?: WizardEvent; preselectedVehicle?: WizardVehicl
 export function CreateRideWizard({ preselectedEvent, preselectedVehicle }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [step, setStep] = useState<WizardStep>(1)
+  const hasEventParam = !!(preselectedEvent ?? searchParams.get('event'))
+  const [step, setStep] = useState<WizardStep>(hasEventParam ? 2 : 1)
   const [event, setEvent] = useState<WizardEvent | null>(preselectedEvent ?? null)
   const [vehicle, setVehicle] = useState<WizardVehicle | null>(preselectedVehicle ?? null)
   const [details, setDetails] = useState<RideDetails>({

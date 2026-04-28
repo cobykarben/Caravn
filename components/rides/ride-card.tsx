@@ -15,9 +15,10 @@ type RideCardProps = {
     seat_map: Record<string, Seat>
     driver?: { full_name: string; username: string; avatar_url: string | null } | null
   }
+  role?: 'driver' | 'rider'
 }
 
-export function RideCard({ ride }: RideCardProps) {
+export function RideCard({ ride, role }: RideCardProps) {
   const seats = Object.values(ride.seat_map)
   const availableSeats = seats.filter(s => !s.isDriver && s.status === 'available').length
   const isFull = ride.status === 'full'
@@ -73,12 +74,22 @@ export function RideCard({ ride }: RideCardProps) {
         </div>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-border">
+      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-2">
         <span className="text-xs font-medium">
           {ride.is_paid
             ? `$${ride.cost_per_person.toFixed(2)} total trip cost · split equally`
             : <span className="text-green-400">Free ride</span>}
         </span>
+        {role === 'driver' && (
+          <Badge variant="outline" className="text-xs border-white/25 text-white/70 shrink-0">
+            Driving
+          </Badge>
+        )}
+        {role === 'rider' && (
+          <Badge variant="outline" className="text-xs border-green-500/40 text-green-400 shrink-0">
+            Riding
+          </Badge>
+        )}
       </div>
     </Link>
   )

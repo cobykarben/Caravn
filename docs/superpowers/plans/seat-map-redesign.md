@@ -24,7 +24,7 @@ Replace the current abstract dot-on-rectangle seat map with an airline-style int
 
 ---
 
-## Task 1 — Vehicle silhouette SVG library
+## Task 1 — Vehicle silhouette SVG library ✅ Done
 
 **File to create:** `components/rides/vehicle-silhouettes.ts`
 
@@ -70,7 +70,7 @@ export const SILHOUETTES: Record<VehicleType, Silhouette>
 
 ---
 
-## Task 2 — Redesign the SeatMap component
+## Task 2 — Redesign the SeatMap component ✅ Done
 
 **File to modify:** `components/rides/seat-map.tsx`
 
@@ -111,7 +111,7 @@ export const SILHOUETTES: Record<VehicleType, Silhouette>
 
 ---
 
-## Task 3 — Wire vehicleType through all callers
+## Task 3 — Wire vehicleType through all callers ✅ Done
 
 **4 touch points — all small changes:**
 

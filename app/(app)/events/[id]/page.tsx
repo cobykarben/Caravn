@@ -20,6 +20,7 @@ type EventRow = {
 
 type RideRow = {
   id: string
+  driver_id: string
   departure_address: string
   departure_time: string
   cost_per_person: number
@@ -35,6 +36,7 @@ export default async function EventDetailPage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   const { data: rawEvent } = await supabase
     .from('events')
@@ -48,7 +50,7 @@ export default async function EventDetailPage({
   const { data: rawRides } = await supabase
     .from('rides')
     .select(`
-      id, departure_address, departure_time, cost_per_person, is_paid,
+      id, driver_id, departure_address, departure_time, cost_per_person, is_paid,
       seat_map, status, notes, pickup_radius_miles,
       driver:profiles!driver_id(id, full_name, username, avatar_url, phone_verified),
       vehicle:vehicles!vehicle_id(make, model, year, color, type, capacity)
@@ -58,6 +60,19 @@ export default async function EventDetailPage({
     .order('departure_time', { ascending: true })
 
   const rides = (rawRides ?? []) as unknown as RideRow[]
+
+  // Find rides where the current user has an accepted application
+  const acceptedRideIds = new Set<string>()
+  if (user && rides.length > 0) {
+    const rideIds = rides.map(r => r.id)
+    const { data: myApps } = await supabase
+      .from('ride_applications')
+      .select('ride_id')
+      .eq('rider_id', user.id)
+      .eq('status', 'accepted')
+      .in('ride_id', rideIds)
+    for (const app of myApps ?? []) acceptedRideIds.add(app.ride_id as string)
+  }
 
   const startDate = new Date(event.starts_at)
   const dateStr = startDate.toLocaleDateString('en-US', {
@@ -123,9 +138,14 @@ export default async function EventDetailPage({
           </div>
         ) : (
           <div className="space-y-3">
-            {rides.map(ride => (
-              <RideCard key={ride.id} ride={ride} />
-            ))}
+            {rides.map(ride => {
+              const role = user
+                ? ride.driver_id === user.id ? 'driver'
+                  : acceptedRideIds.has(ride.id) ? 'rider'
+                  : undefined
+                : undefined
+              return <RideCard key={ride.id} ride={ride} role={role as 'driver' | 'rider' | undefined} />
+            })}
           </div>
         )}
       </div>

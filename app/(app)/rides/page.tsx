@@ -65,7 +65,7 @@ export default async function RidesPage() {
               </h2>
               <div className="space-y-3">
                 {drivingRides.map(ride => (
-                  <RideCard key={ride.id} ride={ride} />
+                  <RideCard key={ride.id} ride={ride} role="driver" />
                 ))}
               </div>
             </section>
@@ -78,7 +78,7 @@ export default async function RidesPage() {
               </h2>
               <div className="space-y-3">
                 {ridingRides.map(ride => (
-                  <RideCard key={ride.id} ride={ride} />
+                  <RideCard key={ride.id} ride={ride} role="rider" />
                 ))}
               </div>
             </section>

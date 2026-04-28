@@ -82,20 +82,22 @@ describe('CreateRideWizard — step 1 (event selection)', () => {
     expect(screen.getByRole('button', { name: /^next$/i })).toBeDisabled()
   })
 
-  it('Next is enabled when a preselected event is provided', () => {
+  it('skips event selection step when a preselected event is provided', () => {
     render(<CreateRideWizard preselectedEvent={mockEvent} />)
-    expect(screen.getByRole('button', { name: /^next$/i })).not.toBeDisabled()
+    expect(screen.queryByText(/select event/i)).not.toBeInTheDocument()
   })
 
-  it('shows selected event name when preselected', () => {
+  it('shows selected event name in step 1 after navigating back', async () => {
+    const user = userEvent.setup()
     render(<CreateRideWizard preselectedEvent={mockEvent} />)
+    await user.click(screen.getByRole('button', { name: /^back$/i }))
     expect(screen.getByText('Taylor Swift — Eras Tour')).toBeInTheDocument()
   })
 
-  it('shows search input again after clicking "Change event"', async () => {
+  it('shows search input after clicking "Change event" from step 1', async () => {
     const user = userEvent.setup()
     render(<CreateRideWizard preselectedEvent={mockEvent} />)
-    expect(screen.queryByPlaceholderText(/search events/i)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^back$/i }))
     await user.click(screen.getByRole('button', { name: /change event/i }))
     expect(screen.getByPlaceholderText(/search events/i)).toBeInTheDocument()
   })
