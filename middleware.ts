@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  const isAuthPage = ['/login', '/signup', '/verify-email'].some(p => pathname.startsWith(p))
+  const isAuthPage = ['/login', '/signup', '/verify-email', '/auth/'].some(p => pathname.startsWith(p))
   const isApiRoute = pathname.startsWith('/api/')
 
   if (!user && !isAuthPage && !isApiRoute) {
