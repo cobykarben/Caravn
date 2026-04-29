@@ -35,7 +35,7 @@ export async function middleware(request: NextRequest) {
 
   if (user && isAuthPage && !isApiRoute) {
     const url = request.nextUrl.clone()
-    url.pathname = '/events'
+    url.pathname = '/ai'
     return NextResponse.redirect(url)
   }
 
